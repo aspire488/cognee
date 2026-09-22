@@ -110,9 +110,14 @@ QUERIES: dict[str, str] = {
         WHERE {_BASE_FILTER}
         GROUP BY ALL ORDER BY day, tracking_event
     """,
-    # Graph-build pipeline health by day and version.
+    # Graph-build pipeline health by day, version, and safe exception class.
     "pipeline_outcomes_daily": f"""
         SELECT ingestion_date AS day, {_VERSION} AS version,
+               CASE
+                   WHEN tracking_event = 'Pipeline Run Errored'
+                   THEN coalesce(json_extract_string(properties, '$.error_type'), 'unknown')
+                   ELSE 'n/a'
+               END AS error_type,
                count(*) FILTER (tracking_event = 'Pipeline Run Started')   AS started,
                count(*) FILTER (tracking_event = 'Pipeline Run Completed') AS completed,
                count(*) FILTER (tracking_event = 'Pipeline Run Errored')   AS errored,
@@ -120,7 +125,7 @@ QUERIES: dict[str, str] = {
                    AS identities_with_errors
         FROM analytics.main.pipeline_events
         WHERE {_BASE_FILTER} AND tracking_event LIKE 'Pipeline Run%'
-        GROUP BY ALL ORDER BY day, version
+        GROUP BY ALL ORDER BY day, version, error_type
     """,
     # SDK-level operation health (search/add/cognify) by day and version.
     "sdk_exec_outcomes_daily": f"""
