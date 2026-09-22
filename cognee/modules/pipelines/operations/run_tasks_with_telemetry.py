@@ -47,7 +47,7 @@ async def run_tasks_with_telemetry(
             }
             | config,
         )
-    except Exception:
+    except Exception as exc:
         logger.exception(
             "Pipeline run errored: `%s`\n",
             pipeline_name,
@@ -59,6 +59,9 @@ async def run_tasks_with_telemetry(
                 "pipeline_name": str(pipeline_name),
                 "cognee_version": cognee_version,
                 "tenant_id": str(user.tenant_id) if user.tenant_id else "Single User Tenant",
+                # Keep telemetry actionable without exporting exception messages,
+                # which may contain user or deployment data.
+                "error_type": type(exc).__name__,
             }
             | config,
         )
